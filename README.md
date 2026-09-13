@@ -1,21 +1,60 @@
 # AntiDUB - Bloqueador de Dublagem por IA no YouTube
 
-Extensão para Google Chrome (Manifest V3) que define automaticamente a faixa de áudio original como padrão em todos os vídeos do YouTube, prevenindo a imposição de dublagens sintéticas de inteligência artificial.
+Extensão para Google Chrome (Manifest V3) desenvolvida em Programação Orientada a Objetos (POO) que define automaticamente a faixa de áudio original como padrão em todos os vídeos do YouTube, prevenindo a imposição de dublagens sintéticas de inteligência artificial.
 
-## Como Funciona
+## Estrutura de Pacotes e Arquitetura POO
 
-1. **Execução Automática**: Ao carregar um vídeo ou navegar dentro do YouTube (`yt-navigate-finish`), o módulo [`content-main.js`](content-main.js) é acionado no contexto principal da página (`world: MAIN`).
-2. **Identificação da Faixa Original**: Consulta as faixas do player nativo do YouTube (`#movie_player.getAvailableAudioTracks()`) e detecta a faixa original por meio de múltiplos critérios (`isOriginal`, IDs técnicos como `orig`, ou descrições no rótulo).
-3. **Alternância Instantânea**: Caso o vídeo tenha iniciado com dublagem automática, a extensão comuta imediatamente para o áudio original (`#movie_player.setAudioTrack()`), sem recarregar o vídeo.
-4. **Painel de Controle (Popup)**: Permite ao usuário pausar ou reativar o bloqueio a qualquer momento através do ícone da extensão, com preferência persistida no `chrome.storage.local`.
+O projeto é 100% orientado a objetos, seguindo o princípio de **uma classe por arquivo** (com o nome do arquivo exatamente igual ao da classe) e organizado em pacotes modulares sob o diretório `src/`:
 
-## Estrutura do Projeto
+```
+AntiDUB_Chrome_Extension/
+├── icons/
+│   ├── icon-16.png, icon-32.png, icon-48.png, icon-128.png
+├── src/
+│   ├── bridge/
+│   │   └── SettingsBridge.js       # Ponte entre chrome.storage e o DOM
+│   ├── controllers/
+│   │   └── AntiDubController.js    # Orquestrador do ciclo de vida e eventos SPA
+│   ├── player/
+│   │   └── YouTubePlayerAdapter.js # Adapter para API nativa do player do YouTube
+│   ├── popup/
+│   │   ├── popup.html              # Interface do popup (Dark Mode)
+│   │   ├── popup.css               # Estilização moderna
+│   │   └── PopupController.js      # Controlador de eventos e persistência da UI
+│   ├── resolvers/
+│   │   └── AudioTrackResolver.js   # Orquestrador do Strategy Pattern
+│   └── strategies/
+│       ├── MetadataStrategy.js       # Resolução via streamingData.adaptiveFormats
+│       ├── DeepInspectionStrategy.js # Varredura recursiva de nós e strings
+│       ├── EliminationStrategy.js    # Resolução reversa por exclusão de dublagens
+│       └── DomMenuStrategy.js        # Varredura do menu de engrenagem no DOM
+├── manifest.json                   # Manifesto da extensão (Manifest V3)
+└── README.md
+```
 
-- `manifest.json`: Definição de permissões, ícones, popup e content scripts.
-- `content-isolated.js`: Executado no contexto isolado para ler e sincronizar as configurações do usuário (`chrome.storage.local`).
-- `content-main.js`: Executado no contexto principal da página com acesso direto à API do player do YouTube.
-- `popup.html`, `popup.css`, `popup.js`: Interface do painel de controle com switch liga/desliga.
-- `icons/`: Ícones da extensão nas resoluções 16x16, 32x32, 48x48 e 128x128.
+### Detalhamento dos Módulos
+
+#### `src/bridge/`
+- [`SettingsBridge.js`](src/bridge/SettingsBridge.js): Executado em `world: ISOLATED`, escuta alterações no `chrome.storage.local` e transmite via `CustomEvent` para o contexto principal do YouTube.
+
+#### `src/player/`
+- [`YouTubePlayerAdapter.js`](src/player/YouTubePlayerAdapter.js): **Adapter Pattern** que isola e padroniza o acesso ao elemento `#movie_player` e suas funções internas (`getAudioTrack`, `getAvailableAudioTracks`, `setAudioTrack`, `isAdShowing`).
+
+#### `src/strategies/`
+- [`MetadataStrategy.js`](src/strategies/MetadataStrategy.js): Identifica faixas originais via metadados de streaming.
+- [`DeepInspectionStrategy.js`](src/strategies/DeepInspectionStrategy.js): Realiza inspeção profunda em nós internos das faixas procurando referências a `original`.
+- [`EliminationStrategy.js`](src/strategies/EliminationStrategy.js): Identifica o áudio original por exclusão, descartando faixas que contenham rótulos de dublagem.
+- [`DomMenuStrategy.js`](src/strategies/DomMenuStrategy.js): Inspeciona os nós do menu de configurações (`.ytp-menuitem`) do player buscando o sufixo "original".
+
+#### `src/resolvers/`
+- [`AudioTrackResolver.js`](src/resolvers/AudioTrackResolver.js): **Strategy Pattern** que gerencia a cadeia de estratégias de resolução com prioridade e fallback seguro.
+
+#### `src/controllers/`
+- [`AntiDubController.js`](src/controllers/AntiDubController.js): **Facade/Controller** que orquestra o ciclo de vida da SPA (`yt-navigate-finish`), detecta comerciais (pre-roll ads) para evitar falsos positivos e efetua a troca automática para o áudio original.
+
+#### `src/popup/`
+- [`PopupController.js`](src/popup/PopupController.js): Gerencia as preferências do usuário no popup da extensão.
+- [`popup.html`](src/popup/popup.html) / [`popup.css`](src/popup/popup.css): Interface visual compacta no tema escuro do YouTube.
 
 ## Como Instalar (Modo Desenvolvedor)
 

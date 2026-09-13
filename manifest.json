@@ -16,7 +16,7 @@
         "https://www.youtube.com/*"
     ],
     "action": {
-        "default_popup": "popup.html",
+        "default_popup": "src/popup/popup.html",
         "default_icon": {
             "16": "icons/icon-16.png",
             "32": "icons/icon-32.png",
@@ -30,7 +30,7 @@
                 "https://www.youtube.com/*"
             ],
             "js": [
-                "content-isolated.js"
+                "src/bridge/SettingsBridge.js"
             ],
             "run_at": "document_start"
         },
@@ -39,7 +39,13 @@
                 "https://www.youtube.com/*"
             ],
             "js": [
-                "content-main.js"
+                "src/player/YouTubePlayerAdapter.js",
+                "src/strategies/MetadataStrategy.js",
+                "src/strategies/DeepInspectionStrategy.js",
+                "src/strategies/EliminationStrategy.js",
+                "src/strategies/DomMenuStrategy.js",
+                "src/resolvers/AudioTrackResolver.js",
+                "src/controllers/AntiDubController.js"
             ],
             "world": "MAIN",
             "run_at": "document_idle"
