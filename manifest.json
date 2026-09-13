@@ -40,6 +40,7 @@
             ],
             "js": [
                 "src/services/OEmbedGateway.js",
+                "src/services/CachedTitleGateway.js",
                 "src/adapters/YouTubePlayerAdapter.js",
                 "src/adapters/TitleDomAdapter.js",
                 "src/strategies/MetadataStrategy.js",
@@ -47,7 +48,8 @@
                 "src/strategies/EliminationStrategy.js",
                 "src/strategies/DomMenuStrategy.js",
                 "src/strategies/AudioTrackResolver.js",
-                "src/controllers/AntiDubController.js"
+                "src/controllers/AntiDubController.js",
+                "src/controllers/TitleController.js"
             ],
             "world": "MAIN",
             "run_at": "document_idle"

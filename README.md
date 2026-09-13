@@ -15,12 +15,14 @@ AntiDUB_Chrome_Extension/
 │   │   ├── TitleDomAdapter.js          # Adapter para localização e mutação do título no DOM
 │   │   └── YouTubePlayerAdapter.js     # Adapter para API nativa do player (#movie_player)
 │   ├── controllers/
-│   │   └── AntiDubController.js        # Orquestrador do ciclo de vida SPA e comutação de áudio
+│   │   ├── AntiDubController.js        # Orquestrador do ciclo de vida SPA e comutação de áudio
+│   │   └── TitleController.js          # Orquestrador da restauração do título original
 │   ├── popup/
 │   │   ├── popup.html                  # Interface do popup (Dark Mode)
 │   │   ├── popup.css                   # Estilização compacta
 │   │   └── PopupController.js          # Controlador de eventos e persistência da UI
 │   ├── services/
+│   │   ├── CachedTitleGateway.js       # Proxy Pattern (Cache em memória) para títulos
 │   │   ├── OEmbedGateway.js            # Gateway HTTP para a API oEmbed (títulos originais)
 │   │   └── SettingsBridge.js           # Ponte de sincronização entre chrome.storage e DOM
 │   └── strategies/
@@ -41,7 +43,8 @@ AntiDUB_Chrome_Extension/
 
 #### `src/services/` (Comunicação e Integração)
 - [`SettingsBridge.js`](src/services/SettingsBridge.js): Roda em `world: ISOLATED` e faz a ponte reativa entre `chrome.storage.local` e eventos do DOM.
-- [`OEmbedGateway.js`](src/services/OEmbedGateway.js): Gateway Pattern que realiza chamadas assíncronas ao endpoint oEmbed com cache LRU em memória e controle de timeout.
+- [`OEmbedGateway.js`](src/services/OEmbedGateway.js): Gateway Pattern que realiza chamadas assíncronas ao endpoint oEmbed com controle de timeout via `AbortController`.
+- [`CachedTitleGateway.js`](src/services/CachedTitleGateway.js): Proxy Pattern (Cache Proxy) que intercepta requisições de títulos e gerencia o cache em memória (LRU simples), delegando ao `OEmbedGateway` somente em cache miss.
 
 #### `src/strategies/` (Strategy Pattern)
 - [`AudioTrackResolver.js`](src/strategies/AudioTrackResolver.js): Contexto do Strategy Pattern que executa a cadeia de estratégias em cascata.
@@ -52,6 +55,7 @@ AntiDUB_Chrome_Extension/
 
 #### `src/controllers/` (Facade / Orquestração)
 - [`AntiDubController.js`](src/controllers/AntiDubController.js): Gerencia o ciclo de vida da SPA (`yt-navigate-finish`), eventos de vídeo, suspensão em anúncios e acionamento da troca de áudio.
+- [`TitleController.js`](src/controllers/TitleController.js): Gerencia o ciclo de vida da SPA para títulos, coordenando o `CachedTitleGateway` e o `TitleDomAdapter` com polling resiliente e proteção contra race conditions.
 
 #### `src/popup/` (Interface do Usuário)
 - [`PopupController.js`](src/popup/PopupController.js): Gerencia as preferências do usuário no painel popup.

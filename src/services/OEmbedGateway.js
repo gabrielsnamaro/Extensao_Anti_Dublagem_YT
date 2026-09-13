@@ -4,24 +4,19 @@
  * 
  * Responsabilidade:
  * - Realizar requisições HTTP assíncronas para o endpoint oEmbed do YouTube.
- * - Tratar erros de rede, respostas não-200 e timeouts com AbortController.
- * - Fornecer cache em memória (LRU simples) para evitar requisições redundantes durante navegação.
+ * - Tratar erros de rede, respostas HTTP não-200 e timeouts via AbortController.
+ * - Fazer o parse e sanitização do título original retornado no payload JSON.
  */
 
 class OEmbedGateway {
-  #cache;
-  #maxCacheSize;
   #timeoutMs;
 
   /**
    * @param {Object} [config={}]
    * @param {number} [config.timeoutMs=5000] - Tempo limite em milissegundos para a requisição.
-   * @param {number} [config.maxCacheSize=100] - Limite máximo de entradas no cache em memória.
    */
-  constructor({ timeoutMs = 5000, maxCacheSize = 100 } = {}) {
-    this.#cache = new Map();
+  constructor({ timeoutMs = 5000 } = {}) {
     this.#timeoutMs = timeoutMs;
-    this.#maxCacheSize = maxCacheSize;
   }
 
   /**
@@ -36,25 +31,10 @@ class OEmbedGateway {
   }
 
   /**
-   * Armazena um título no cache em memória respeitando o limite máximo.
-   * 
-   * @param {string} videoId 
-   * @param {string} title 
-   */
-  #saveToCache(videoId, title) {
-    if (this.#cache.size >= this.#maxCacheSize) {
-      // Remove a chave mais antiga inserida (política FIFO/LRU simples)
-      const oldestKey = this.#cache.keys().next().value;
-      this.#cache.delete(oldestKey);
-    }
-    this.#cache.set(videoId, title);
-  }
-
-  /**
-   * Obtém o título original de um vídeo a partir do seu videoId via oEmbed.
+   * Obtém o título original de um vídeo a partir do seu videoId via requisição oEmbed.
    * 
    * @param {string} videoId - ID do vídeo (ex: 'dQw4w9WgXcQ')
-   * @returns {Promise<string|null>} Retorna o título original ou null em caso de falha.
+   * @returns {Promise<string|null>} Retorna o título original limpo ou null em caso de falha.
    */
   async fetchOriginalTitle(videoId) {
     if (!videoId || typeof videoId !== 'string') {
@@ -63,12 +43,7 @@ class OEmbedGateway {
 
     const cleanVideoId = videoId.trim();
 
-    // 1. Verificação de Cache em Memória
-    if (this.#cache.has(cleanVideoId)) {
-      return this.#cache.get(cleanVideoId);
-    }
-
-    // 2. Configuração de Timeout e AbortController
+    // Configuração de Timeout e AbortController
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.#timeoutMs);
 
@@ -90,9 +65,7 @@ class OEmbedGateway {
       const data = await response.json();
 
       if (data && typeof data.title === 'string' && data.title.trim().length > 0) {
-        const originalTitle = data.title.trim();
-        this.#saveToCache(cleanVideoId, originalTitle);
-        return originalTitle;
+        return data.title.trim();
       }
 
       return null;
@@ -107,22 +80,6 @@ class OEmbedGateway {
       clearTimeout(timeoutId);
     }
   }
-
-  /**
-   * Limpa todo o cache em memória de títulos consultados.
-   */
-  clearCache() {
-    this.#cache.clear();
-  }
-
-  /**
-   * Retorna a quantidade de títulos armazenados no cache.
-   * @returns {number}
-   */
-  get cacheSize() {
-    return this.#cache.size;
-  }
 }
 
 window.OEmbedGateway = OEmbedGateway;
-
