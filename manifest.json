@@ -39,6 +39,7 @@
                 "https://www.youtube.com/*"
             ],
             "js": [
+                "src/utils/Logger.js",
                 "src/services/OEmbedGateway.js",
                 "src/services/CachedTitleGateway.js",
                 "src/adapters/YouTubePlayerAdapter.js",

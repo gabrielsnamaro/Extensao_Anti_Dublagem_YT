@@ -10,13 +10,16 @@
 
 class OEmbedGateway {
   #timeoutMs;
+  #logger;
 
   /**
    * @param {Object} [config={}]
    * @param {number} [config.timeoutMs=5000] - Tempo limite em milissegundos para a requisição.
+   * @param {Logger} [logger=null]
    */
-  constructor({ timeoutMs = 5000 } = {}) {
+  constructor({ timeoutMs = 5000 } = {}, logger = null) {
     this.#timeoutMs = timeoutMs;
+    this.#logger = logger || (window.Logger ? window.Logger.forTitle() : console);
   }
 
   /**
@@ -58,7 +61,7 @@ class OEmbedGateway {
       });
 
       if (!response.ok) {
-        console.warn(`[AntiDUB][OEmbedGateway] Falha ao consultar oEmbed para ${cleanVideoId}: status ${response.status}`);
+        this.#logger.warn(`Falha ao consultar oEmbed para ${cleanVideoId}: status ${response.status}`);
         return null;
       }
 
@@ -71,9 +74,9 @@ class OEmbedGateway {
       return null;
     } catch (err) {
       if (err.name === 'AbortError') {
-        console.warn(`[AntiDUB][OEmbedGateway] Timeout (${this.#timeoutMs}ms) ao consultar oEmbed para ${cleanVideoId}`);
+        this.#logger.warn(`Timeout (${this.#timeoutMs}ms) ao consultar oEmbed para ${cleanVideoId}`);
       } else {
-        console.warn(`[AntiDUB][OEmbedGateway] Erro de rede ao consultar oEmbed para ${cleanVideoId}:`, err);
+        this.#logger.warn(`Erro de rede ao consultar oEmbed para ${cleanVideoId}:`, err);
       }
       return null;
     } finally {

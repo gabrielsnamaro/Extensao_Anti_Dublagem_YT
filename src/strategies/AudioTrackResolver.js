@@ -5,12 +5,15 @@
 
 class AudioTrackResolver {
   #strategies = [];
+  #logger;
 
   /**
    * Inicializa o resolvedor registrando a lista padrão de estratégias.
    * @param {Array<Object>} [customStrategies=null]
+   * @param {Logger} [logger=null]
    */
-  constructor(customStrategies = null) {
+  constructor(customStrategies = null, logger = null) {
+    this.#logger = logger || (window.Logger ? window.Logger.forAudio() : console);
     if (Array.isArray(customStrategies)) {
       this.#strategies = customStrategies;
     } else {
@@ -51,7 +54,7 @@ class AudioTrackResolver {
           };
         }
       } catch (err) {
-        console.warn(`[AntiDUB] Falha ao executar estratégia ${strategy.constructor.name}:`, err);
+        this.#logger.warn(`Falha ao executar estratégia ${strategy.constructor.name}:`, err);
       }
     }
 

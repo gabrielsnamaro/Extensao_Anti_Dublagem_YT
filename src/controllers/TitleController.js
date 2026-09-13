@@ -13,21 +13,23 @@
 class TitleController {
   #titleGateway;
   #domAdapter;
+  #logger;
   #isEnabled;
   #currentVideoId = null;
   #retryTimerId = null;
   #isProcessing = false;
-  #logPrefix = '[AntiDUB][Title]';
   #datasetAttr = 'antidubEnabled';
   #eventSettingsChanged = 'antidub:settings-changed';
 
   /**
    * @param {CachedTitleGateway} [titleGateway=null] - Proxy de cache e gateway HTTP.
    * @param {TitleDomAdapter} [domAdapter=null] - Adapter para manipulação do DOM.
+   * @param {Logger} [logger=null] - Utilitário de logging.
    */
-  constructor(titleGateway = null, domAdapter = null) {
+  constructor(titleGateway = null, domAdapter = null, logger = null) {
     this.#titleGateway = titleGateway || new window.CachedTitleGateway();
     this.#domAdapter = domAdapter || new window.TitleDomAdapter();
+    this.#logger = logger || (window.Logger ? window.Logger.forTitle() : console);
     this.#isEnabled = document.documentElement?.dataset?.[this.#datasetAttr] !== 'false';
   }
 
@@ -35,7 +37,7 @@ class TitleController {
    * Inicializa o controlador registrando os ouvintes de ciclo de vida e preferências.
    */
   init() {
-    console.log(`${this.#logPrefix} TitleController inicializado com sucesso.`);
+    this.#logger.info('TitleController inicializado com sucesso.');
 
     // 1. Ouve alterações de preferências emitidas pelo SettingsBridge
     window.addEventListener(this.#eventSettingsChanged, (event) => {
@@ -74,7 +76,7 @@ class TitleController {
         return matchShorts[1];
       }
     } catch (err) {
-      console.warn(`${this.#logPrefix} Erro ao extrair videoId da URL:`, err);
+      this.#logger.warn('Erro ao extrair videoId da URL:', err);
     }
     return null;
   }
@@ -119,7 +121,7 @@ class TitleController {
       }
 
       if (!originalTitle) {
-        console.warn(`${this.#logPrefix} Não foi possível obter o título original para ${videoId}.`);
+        this.#logger.warn(`Não foi possível obter o título original para ${videoId}.`);
         return;
       }
 
@@ -142,26 +144,27 @@ class TitleController {
 
         if (titleEl) {
           if (this.#domAdapter.isAlreadyUpdated(originalTitle)) {
+            this.#logger.info(`Título atual já é o original ("${originalTitle}"). Nenhuma alteração necessária.`);
             this.clearPendingRetries();
             return;
           }
 
           const success = this.#domAdapter.updateTitle(originalTitle);
           if (success) {
-            console.log(`${this.#logPrefix} Título original restaurado: "${originalTitle}".`);
+            this.#logger.info(`Título original restaurado: "${originalTitle}".`);
             this.clearPendingRetries();
             return;
           }
         }
 
         if (attempts >= maxAttempts) {
-          console.warn(`${this.#logPrefix} Limite de tentativas atingido ao tentar localizar o nó do título no DOM.`);
+          this.#logger.warn('Limite de tentativas atingido ao tentar localizar o nó do título no DOM.');
           this.clearPendingRetries();
         }
       }, 200);
 
     } catch (err) {
-      console.error(`${this.#logPrefix} Erro inesperado ao restaurar título:`, err);
+      this.#logger.error('Erro inesperado ao restaurar título:', err);
     } finally {
       this.#isProcessing = false;
     }
@@ -179,6 +182,7 @@ class TitleController {
     }
 
     this.#currentVideoId = newVideoId;
+    this.#logger.info(`Novo vídeo identificado (${newVideoId}). Verificando título original...`);
     this.restoreOriginalTitle();
   }
 
@@ -191,6 +195,8 @@ class TitleController {
     const wasEnabled = this.#isEnabled;
     this.#isEnabled = newEnabled;
 
+    this.#logger.info(`Estado alterado para: ${this.#isEnabled ? 'ATIVADO' : 'DESATIVADO'}.`);
+
     if (!wasEnabled && this.#isEnabled && this.getVideoIdFromUrl()) {
       this.restoreOriginalTitle();
     }
@@ -202,3 +208,4 @@ window.TitleController = TitleController;
 // Instanciação e execução automática
 const titleController = new TitleController();
 titleController.init();
+

@@ -6,21 +6,23 @@
 class AntiDubController {
   #playerAdapter;
   #trackResolver;
+  #logger;
   #isEnabled;
   #currentVideoId = null;
   #retryTimerId = null;
   #isProcessing = false;
-  #logPrefix = '[AntiDUB]';
   #datasetAttr = 'antidubEnabled';
   #eventSettingsChanged = 'antidub:settings-changed';
 
   /**
    * @param {YouTubePlayerAdapter} [playerAdapter=null]
    * @param {AudioTrackResolver} [trackResolver=null]
+   * @param {Logger} [logger=null]
    */
-  constructor(playerAdapter = null, trackResolver = null) {
+  constructor(playerAdapter = null, trackResolver = null, logger = null) {
     this.#playerAdapter = playerAdapter || new window.YouTubePlayerAdapter();
     this.#trackResolver = trackResolver || new window.AudioTrackResolver();
+    this.#logger = logger || (window.Logger ? window.Logger.forAudio() : console);
     this.#isEnabled = document.documentElement?.dataset?.[this.#datasetAttr] !== 'false';
   }
 
@@ -28,7 +30,7 @@ class AntiDubController {
    * Inicializa o controlador, registrando ouvintes de ciclo de vida e eventos de mídia.
    */
   init() {
-    console.log(`${this.#logPrefix} AntiDubController inicializado com sucesso.`);
+    this.#logger.info('AntiDubController inicializado com sucesso.');
 
     // 1. Ouve alterações de preferências emitidas pelo SettingsBridge
     window.addEventListener(this.#eventSettingsChanged, (event) => {
@@ -97,7 +99,7 @@ class AntiDubController {
     this.clearPendingRetries();
 
     if (!this.#isEnabled) {
-      console.log(`${this.#logPrefix} Extensão desativada nas preferências. Nenhuma alteração.`);
+      this.#logger.info('Extensão desativada nas preferências. Nenhuma alteração.');
       return;
     }
 
@@ -118,7 +120,7 @@ class AntiDubController {
 
       // Se houver anúncio rodando, não cancela nem altera faixas
       if (this.#playerAdapter.isAdShowing()) {
-        console.log(`${this.#logPrefix} Anúncio em reprodução. Aguardando vídeo principal... (${attempts}/${maxAttempts})`);
+        this.#logger.info(`Anúncio em reprodução. Aguardando vídeo principal... (${attempts}/${maxAttempts})`);
         return;
       }
 
@@ -134,7 +136,7 @@ class AntiDubController {
 
       // Se só houver 1 faixa, não há dublagem para comutar
       if (tracks.length === 1) {
-        console.log(`${this.#logPrefix} Vídeo possui apenas 1 faixa disponível. Nenhuma ação necessária.`);
+        this.#logger.info('Vídeo possui apenas 1 faixa disponível. Nenhuma ação necessária.');
         this.clearPendingRetries();
         return;
       }
@@ -146,7 +148,7 @@ class AntiDubController {
         if (attempts < maxAttempts) {
           return;
         }
-        console.warn(`${this.#logPrefix} Nenhuma faixa original identificada após ${attempts} tentativas:`, tracks);
+        this.#logger.warn(`Nenhuma faixa original identificada após ${attempts} tentativas:`, tracks);
         this.clearPendingRetries();
         return;
       }
@@ -156,20 +158,20 @@ class AntiDubController {
       const currentTrack = this.#playerAdapter.getCurrentAudioTrack();
       const currentTrackId = this.#playerAdapter.getTrackId(currentTrack);
 
-      console.log(
-        `${this.#logPrefix} Faixa original identificada via ${resolution.strategyName}: "${originalTrack.displayName || originalTrackId}".`
+      this.#logger.info(
+        `Faixa original identificada via ${resolution.strategyName}: "${originalTrack.displayName || originalTrackId}".`
       );
 
       // Verifica se a faixa atual já é a original
       if (currentTrackId && originalTrackId && currentTrackId === originalTrackId) {
-        console.log(`${this.#logPrefix} Faixa atual já é a original (${currentTrackId}). Nenhuma alteração necessária.`);
+        this.#logger.info(`Faixa atual já é a original (${currentTrackId}). Nenhuma alteração necessária.`);
         this.clearPendingRetries();
         return;
       }
 
       // Comuta para o áudio original
-      console.log(
-        `${this.#logPrefix} Dublagem ativa ("${currentTrack?.displayName || currentTrackId || 'Desconhecida'}"). Trocando para original: "${originalTrack.displayName || originalTrackId}"...`
+      this.#logger.info(
+        `Dublagem ativa ("${currentTrack?.displayName || currentTrackId || 'Desconhecida'}"). Trocando para original: "${originalTrack.displayName || originalTrackId}"...`
       );
 
       this.#playerAdapter.setAudioTrack(originalTrack);
@@ -200,7 +202,7 @@ class AntiDubController {
     const wasEnabled = this.#isEnabled;
     this.#isEnabled = newEnabled;
 
-    console.log(`${this.#logPrefix} Estado alterado para: ${this.#isEnabled ? 'ATIVADO' : 'DESATIVADO'}.`);
+    this.#logger.info(`Estado alterado para: ${this.#isEnabled ? 'ATIVADO' : 'DESATIVADO'}.`);
 
     if (!wasEnabled && this.#isEnabled && this.getVideoIdFromUrl()) {
       this.enforceOriginalAudio();

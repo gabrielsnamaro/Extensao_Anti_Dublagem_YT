@@ -39,7 +39,11 @@ class DomMenuStrategy {
         }
       }
     } catch (err) {
-      console.warn(`[AntiDUB] Erro na ${this.getName()}:`, err);
+      if (window.Logger) {
+        window.Logger.forAudio().warn(`Erro na ${this.getName()}:`, err);
+      } else {
+        console.warn(`[AntiDUB][Áudio] Erro na ${this.getName()}:`, err);
+      }
     }
 
     return null;

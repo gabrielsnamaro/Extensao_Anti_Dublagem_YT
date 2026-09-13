@@ -5,12 +5,15 @@
 
 class YouTubePlayerAdapter {
   #elementId;
+  #logger;
 
   /**
    * @param {string} [elementId='movie_player'] - ID do elemento do player no DOM
+   * @param {Logger} [logger=null]
    */
-  constructor(elementId = 'movie_player') {
+  constructor(elementId = 'movie_player', logger = null) {
     this.#elementId = elementId;
+    this.#logger = logger || (window.Logger ? window.Logger.forAudio() : console);
   }
 
   /**
@@ -59,7 +62,7 @@ class YouTubePlayerAdapter {
     try {
       return el.getAvailableAudioTracks();
     } catch (err) {
-      console.warn('[AntiDUB] Erro ao invocar getAvailableAudioTracks():', err);
+      this.#logger.warn('Erro ao invocar getAvailableAudioTracks():', err);
       return null;
     }
   }
@@ -77,7 +80,7 @@ class YouTubePlayerAdapter {
     try {
       return el.getAudioTrack();
     } catch (err) {
-      console.warn('[AntiDUB] Erro ao invocar getAudioTrack():', err);
+      this.#logger.warn('Erro ao invocar getAudioTrack():', err);
       return null;
     }
   }
@@ -108,14 +111,14 @@ class YouTubePlayerAdapter {
       el.setAudioTrack(track);
       return true;
     } catch (errPrimary) {
-      console.warn('[AntiDUB] Falha ao passar objeto para setAudioTrack(). Tentando via ID direto:', errPrimary);
+      this.#logger.warn('Falha ao passar objeto para setAudioTrack(). Tentando via ID direto:', errPrimary);
       const trackId = this.getTrackId(track);
       if (trackId) {
         try {
           el.setAudioTrack(trackId);
           return true;
         } catch (errSecondary) {
-          console.error('[AntiDUB] Falha fatal ao invocar setAudioTrack():', errSecondary);
+          this.#logger.error('Falha fatal ao invocar setAudioTrack():', errSecondary);
         }
       }
     }

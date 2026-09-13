@@ -25,12 +25,14 @@ AntiDUB_Chrome_Extension/
 │   │   ├── CachedTitleGateway.js       # Proxy Pattern (Cache em memória) para títulos
 │   │   ├── OEmbedGateway.js            # Gateway HTTP para a API oEmbed (títulos originais)
 │   │   └── SettingsBridge.js           # Ponte de sincronização entre chrome.storage e DOM
-│   └── strategies/
-│       ├── AudioTrackResolver.js       # Orquestrador da cadeia de estratégias de áudio
-│       ├── DeepInspectionStrategy.js   # Varredura recursiva de nós e strings
-│       ├── DomMenuStrategy.js          # Varredura do menu de engrenagem no DOM
-│       ├── EliminationStrategy.js      # Resolução reversa por exclusão de dublagens
-│       └── MetadataStrategy.js         # Resolução via streamingData.adaptiveFormats
+│   ├── strategies/
+│   │   ├── AudioTrackResolver.js       # Orquestrador da cadeia de estratégias de áudio
+│   │   ├── DeepInspectionStrategy.js   # Varredura recursiva de nós e strings
+│   │   ├── DomMenuStrategy.js          # Varredura do menu de engrenagem no DOM
+│   │   ├── EliminationStrategy.js      # Resolução reversa por exclusão de dublagens
+│   │   └── MetadataStrategy.js         # Resolução via streamingData.adaptiveFormats
+│   └── utils/
+│       └── Logger.js                   # Utilitário central de logging e prefixos setoriais
 ├── manifest.json                       # Manifesto da extensão (Manifest V3)
 └── README.md
 ```
@@ -60,6 +62,9 @@ AntiDUB_Chrome_Extension/
 #### `src/popup/` (Interface do Usuário)
 - [`PopupController.js`](src/popup/PopupController.js): Gerencia as preferências do usuário no painel popup.
 - [`popup.html`](src/popup/popup.html) / [`popup.css`](src/popup/popup.css): Interface visual compacta no tema escuro oficial do YouTube.
+
+#### `src/utils/` (Utilitários Compartilhados)
+- [`Logger.js`](src/utils/Logger.js): Classe utilitária central de logging que encapsula a formatação de prefixos (`[AntiDUB][Áudio]` e `[AntiDUB][Título]`), fornecendo Factory Methods (`Logger.forAudio()`, `Logger.forTitle()`) e eliminando strings hardcoded nas classes de domínio.
 
 ## Como Instalar (Modo Desenvolvedor)
 

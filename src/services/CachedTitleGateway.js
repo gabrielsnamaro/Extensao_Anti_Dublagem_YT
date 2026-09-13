@@ -13,16 +13,19 @@ class CachedTitleGateway {
   #gateway;
   #cache;
   #maxCacheSize;
+  #logger;
 
   /**
    * @param {Object} [gateway=null] - Instância de gateway responsável pela busca externa.
    * @param {Object} [options={}]
    * @param {number} [options.maxCacheSize=150] - Número máximo de títulos mantidos em memória.
+   * @param {Logger} [logger=null]
    */
-  constructor(gateway = null, { maxCacheSize = 150 } = {}) {
+  constructor(gateway = null, { maxCacheSize = 150 } = {}, logger = null) {
     this.#gateway = gateway || new window.OEmbedGateway();
     this.#cache = new Map();
     this.#maxCacheSize = maxCacheSize;
+    this.#logger = logger || (window.Logger ? window.Logger.forTitle() : console);
   }
 
   /**
@@ -41,7 +44,9 @@ class CachedTitleGateway {
 
     // 1. Verificação no Cache (Cache Hit)
     if (this.#cache.has(cleanVideoId)) {
-      return this.#cache.get(cleanVideoId);
+      const cached = this.#cache.get(cleanVideoId);
+      this.#logger.info(`Título recuperado do cache em memória para "${cleanVideoId}".`);
+      return cached;
     }
 
     // 2. Delegação ao Gateway Real (Cache Miss)
@@ -49,8 +54,10 @@ class CachedTitleGateway {
 
     // 3. Armazenamento no Cache
     if (title && typeof title === 'string' && title.trim().length > 0) {
-      this.#saveToCache(cleanVideoId, title.trim());
-      return title.trim();
+      const cleanTitle = title.trim();
+      this.#saveToCache(cleanVideoId, cleanTitle);
+      this.#logger.info(`Título obtido via oEmbed e salvo no cache para "${cleanVideoId}".`);
+      return cleanTitle;
     }
 
     return null;
@@ -107,3 +114,4 @@ class CachedTitleGateway {
 }
 
 window.CachedTitleGateway = CachedTitleGateway;
+
