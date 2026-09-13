@@ -11,50 +11,51 @@ AntiDUB_Chrome_Extension/
 ├── icons/
 │   ├── icon-16.png, icon-32.png, icon-48.png, icon-128.png
 ├── src/
-│   ├── bridge/
-│   │   └── SettingsBridge.js       # Ponte entre chrome.storage e o DOM
+│   ├── adapters/
+│   │   ├── TitleDomAdapter.js          # Adapter para localização e mutação do título no DOM
+│   │   └── YouTubePlayerAdapter.js     # Adapter para API nativa do player (#movie_player)
 │   ├── controllers/
-│   │   └── AntiDubController.js    # Orquestrador do ciclo de vida e eventos SPA
-│   ├── player/
-│   │   └── YouTubePlayerAdapter.js # Adapter para API nativa do player do YouTube
+│   │   └── AntiDubController.js        # Orquestrador do ciclo de vida SPA e comutação de áudio
 │   ├── popup/
-│   │   ├── popup.html              # Interface do popup (Dark Mode)
-│   │   ├── popup.css               # Estilização moderna
-│   │   └── PopupController.js      # Controlador de eventos e persistência da UI
-│   ├── resolvers/
-│   │   └── AudioTrackResolver.js   # Orquestrador do Strategy Pattern
+│   │   ├── popup.html                  # Interface do popup (Dark Mode)
+│   │   ├── popup.css                   # Estilização compacta
+│   │   └── PopupController.js          # Controlador de eventos e persistência da UI
+│   ├── services/
+│   │   ├── OEmbedGateway.js            # Gateway HTTP para a API oEmbed (títulos originais)
+│   │   └── SettingsBridge.js           # Ponte de sincronização entre chrome.storage e DOM
 │   └── strategies/
-│       ├── MetadataStrategy.js       # Resolução via streamingData.adaptiveFormats
-│       ├── DeepInspectionStrategy.js # Varredura recursiva de nós e strings
-│       ├── EliminationStrategy.js    # Resolução reversa por exclusão de dublagens
-│       └── DomMenuStrategy.js        # Varredura do menu de engrenagem no DOM
-├── manifest.json                   # Manifesto da extensão (Manifest V3)
+│       ├── AudioTrackResolver.js       # Orquestrador da cadeia de estratégias de áudio
+│       ├── DeepInspectionStrategy.js   # Varredura recursiva de nós e strings
+│       ├── DomMenuStrategy.js          # Varredura do menu de engrenagem no DOM
+│       ├── EliminationStrategy.js      # Resolução reversa por exclusão de dublagens
+│       └── MetadataStrategy.js         # Resolução via streamingData.adaptiveFormats
+├── manifest.json                       # Manifesto da extensão (Manifest V3)
 └── README.md
 ```
 
-### Detalhamento dos Módulos
+### Detalhamento dos Pacotes
 
-#### `src/bridge/`
-- [`SettingsBridge.js`](src/bridge/SettingsBridge.js): Executado em `world: ISOLATED`, escuta alterações no `chrome.storage.local` e transmite via `CustomEvent` para o contexto principal do YouTube.
+#### `src/adapters/` (Adapter Pattern)
+- [`YouTubePlayerAdapter.js`](src/adapters/YouTubePlayerAdapter.js): Abstrai e padroniza as chamadas ao `#movie_player` (`getAudioTrack`, `getAvailableAudioTracks`, `setAudioTrack`, `isAdShowing`).
+- [`TitleDomAdapter.js`](src/adapters/TitleDomAdapter.js): Abstrai seletores de layout e mutações no DOM do YouTube para títulos (`h1`, `document.title` e meta tags).
 
-#### `src/player/`
-- [`YouTubePlayerAdapter.js`](src/player/YouTubePlayerAdapter.js): **Adapter Pattern** que isola e padroniza o acesso ao elemento `#movie_player` e suas funções internas (`getAudioTrack`, `getAvailableAudioTracks`, `setAudioTrack`, `isAdShowing`).
+#### `src/services/` (Comunicação e Integração)
+- [`SettingsBridge.js`](src/services/SettingsBridge.js): Roda em `world: ISOLATED` e faz a ponte reativa entre `chrome.storage.local` e eventos do DOM.
+- [`OEmbedGateway.js`](src/services/OEmbedGateway.js): Gateway Pattern que realiza chamadas assíncronas ao endpoint oEmbed com cache LRU em memória e controle de timeout.
 
-#### `src/strategies/`
-- [`MetadataStrategy.js`](src/strategies/MetadataStrategy.js): Identifica faixas originais via metadados de streaming.
-- [`DeepInspectionStrategy.js`](src/strategies/DeepInspectionStrategy.js): Realiza inspeção profunda em nós internos das faixas procurando referências a `original`.
-- [`EliminationStrategy.js`](src/strategies/EliminationStrategy.js): Identifica o áudio original por exclusão, descartando faixas que contenham rótulos de dublagem.
-- [`DomMenuStrategy.js`](src/strategies/DomMenuStrategy.js): Inspeciona os nós do menu de configurações (`.ytp-menuitem`) do player buscando o sufixo "original".
+#### `src/strategies/` (Strategy Pattern)
+- [`AudioTrackResolver.js`](src/strategies/AudioTrackResolver.js): Contexto do Strategy Pattern que executa a cadeia de estratégias em cascata.
+- [`MetadataStrategy.js`](src/strategies/MetadataStrategy.js): Resolução via metadados de streaming DASH.
+- [`DeepInspectionStrategy.js`](src/strategies/DeepInspectionStrategy.js): Busca profunda em nós internos das faixas por "original".
+- [`EliminationStrategy.js`](src/strategies/EliminationStrategy.js): Identificação reversa por descarte de faixas rotuladas como dublagem.
+- [`DomMenuStrategy.js`](src/strategies/DomMenuStrategy.js): Inspeciona o menu de engrenagem (`.ytp-menuitem`) do player.
 
-#### `src/resolvers/`
-- [`AudioTrackResolver.js`](src/resolvers/AudioTrackResolver.js): **Strategy Pattern** que gerencia a cadeia de estratégias de resolução com prioridade e fallback seguro.
+#### `src/controllers/` (Facade / Orquestração)
+- [`AntiDubController.js`](src/controllers/AntiDubController.js): Gerencia o ciclo de vida da SPA (`yt-navigate-finish`), eventos de vídeo, suspensão em anúncios e acionamento da troca de áudio.
 
-#### `src/controllers/`
-- [`AntiDubController.js`](src/controllers/AntiDubController.js): **Facade/Controller** que orquestra o ciclo de vida da SPA (`yt-navigate-finish`), detecta comerciais (pre-roll ads) para evitar falsos positivos e efetua a troca automática para o áudio original.
-
-#### `src/popup/`
-- [`PopupController.js`](src/popup/PopupController.js): Gerencia as preferências do usuário no popup da extensão.
-- [`popup.html`](src/popup/popup.html) / [`popup.css`](src/popup/popup.css): Interface visual compacta no tema escuro do YouTube.
+#### `src/popup/` (Interface do Usuário)
+- [`PopupController.js`](src/popup/PopupController.js): Gerencia as preferências do usuário no painel popup.
+- [`popup.html`](src/popup/popup.html) / [`popup.css`](src/popup/popup.css): Interface visual compacta no tema escuro oficial do YouTube.
 
 ## Como Instalar (Modo Desenvolvedor)
 

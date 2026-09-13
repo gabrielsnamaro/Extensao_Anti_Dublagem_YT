@@ -30,7 +30,7 @@
                 "https://www.youtube.com/*"
             ],
             "js": [
-                "src/bridge/SettingsBridge.js"
+                "src/services/SettingsBridge.js"
             ],
             "run_at": "document_start"
         },
@@ -39,12 +39,14 @@
                 "https://www.youtube.com/*"
             ],
             "js": [
-                "src/player/YouTubePlayerAdapter.js",
+                "src/services/OEmbedGateway.js",
+                "src/adapters/YouTubePlayerAdapter.js",
+                "src/adapters/TitleDomAdapter.js",
                 "src/strategies/MetadataStrategy.js",
                 "src/strategies/DeepInspectionStrategy.js",
                 "src/strategies/EliminationStrategy.js",
                 "src/strategies/DomMenuStrategy.js",
-                "src/resolvers/AudioTrackResolver.js",
+                "src/strategies/AudioTrackResolver.js",
                 "src/controllers/AntiDubController.js"
             ],
             "world": "MAIN",
